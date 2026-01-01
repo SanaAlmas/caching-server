@@ -1,2 +1,0 @@
-[console_scripts]
-caching-proxy = app.main:start_server
