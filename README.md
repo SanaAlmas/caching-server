@@ -1,86 +1,227 @@
-1. Objective
+https://roadmap.sh/projects/caching-server
+# Caching Proxy Server
+A simple HTTP caching proxy built to understand **request forwarding, caching, and CLI tooling** from first principles.
+This project focuses on **systems thinking**, not frameworks.
 
-request forwarding, caching, and CLI tooling.
+## 1. Objective
 
-2. Requirement
-I need a terminal command that starts a local server.
-That server receives HTTP requests, forwards them to another server, saves the response, and 
-if the same request happens again, returns the saved response instead of forwarding it.”
+Build a local HTTP proxy server that:
 
-3. 4 small problems
-Problem 1: CLI
+* Receives HTTP requests
+* Forwards them to an origin server
+* Caches responses
+* Returns cached responses for repeated requests
 
+---
+
+## 2. Requirements
+
+The system must provide a **CLI command** that:
+
+* Starts a local server
+* Forwards incoming HTTP requests to another server
+* Saves the response
+* Returns the saved response if the same request occurs again
+
+In short:
+
+> “Don’t forward the same GET request twice.”
+
+---
+
+## 3. How to Run the Project
+
+### Prerequisites
+
+* Python 3.9+
+* Virtual environment (recommended)
+
+### Install dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### Start the proxy server
+
+```bash
+python main.py --port 8000 --origin https://dummyjson.com
+```
+
+You should see output like:
+
+```
+Proxy starting on port 8000
+Origin: https://dummyjson.com
+```
+
+### Example request
+
+```bash
+curl http://localhost:8000/products?limit=1
+```
+
+* First request → forwarded to origin (**cache MISS**)
+* Second request → served from cache (**cache HIT**)
+
+---
+
+## 4. CLI Options
+
+| Option          | Description                          |
+| --------------- | ------------------------------------ |
+| `--port`        | Port to run the proxy server         |
+| `--origin`      | Origin server to forward requests to |
+| `--clear-cache` | Clears the in-memory cache and exits |
+
+Example:
+
+```bash
+python main.py --clear-cache
+```
+
+Output:
+
+```
+Cache cleared
+```
+
+---
+
+## 5. The 4 Small Problems This Project Solves
+
+### Problem 1: CLI
+
+**Question:**
 “How do I start something from the terminal?”
 
-Read --port
-Read --origin
-Read --clear-cache
+**Responsibilities:**
 
-Problem 2: HTTP Server
+* Read `--port`
+* Read `--origin`
+* Read `--clear-cache`
 
+---
+
+### Problem 2: HTTP Server
+
+**Question:**
 “How do I listen on a port and receive requests?”
 
-Listen on localhost:<port>
-Receive:
-path (/products)
-method (GET)
-headers
+**Responsibilities:**
 
-Problem 3: Forwarding Requests
+* Listen on `localhost:<port>`
+* Receive:
 
+  * path (`/products`)
+  * method (`GET`)
+  * headers
+
+At this stage, the server can simply return:
+
+```
+Hello from proxy
+```
+
+---
+
+### Problem 3: Forwarding Requests
+
+**Question:**
 “How do I send the same request to another server?”
 
-Take incoming request
-Reconstruct it for origin + path
-Send request
-Return response to client
+**Responsibilities:**
 
-👉 At this stage, your proxy works without cache.
+* Take incoming request
+* Reconstruct request using:
 
-Problem 4: Caching
+  * origin + path
+  * method
+  * query params
+* Send request to origin
+* Return response to client
 
+👉 At this stage, the proxy works **without caching**.
+
+---
+
+### Problem 4: Caching
+
+**Question:**
 “How do I avoid forwarding the same request twice?”
 
-Create a cache
-Store response
-Look it up next time
+**Responsibilities:**
+
+* Create a cache
+* Store responses
+* Look up cached responses
+* Return cached data if available
+
 That’s it.
 
-4. The correct order to build (very important)
-Step 1: CLI only
-Command runs
-Prints:
+---
+
+## 6. Correct Order to Build (Very Important)
+
+### Step 1: CLI only
+
+* Command runs
+* Prints:
+
+```
 Proxy starting on port 3000
 Origin: http://dummyjson.com
-No server yet.
+```
 
-Step 2: Server only
-Start server
-Always return:
+(No server yet.)
+
+---
+
+### Step 2: Server only
+
+* Start server
+* Always return:
+
+```
 Hello from proxy
-No forwarding.
+```
 
-Step 3: Forwarding only
-Request comes in
-Forward to origin
-Return response
-No caching.
+(No forwarding.)
+
+---
+
+### Step 3: Forwarding only
+
+* Request comes in
+* Forward to origin
+* Return response
+* No caching
 
 ✅ At this point, you already have a working proxy.
 
-Step 4: Add cache
-Cache GET responses
-Key by URL
-Return cached response if exists
+---
 
-Step 5: Add polish
-X-Cache: HIT / MISS
---clear-cache
-Logs
+### Step 4: Add cache
 
-5. Think in “flow”, not code
+* Cache GET responses
+* Key by full URL
+* Return cached response if it exists
+
+---
+
+### Step 5: Add polish
+
+* `X-Cache: HIT / MISS`
+* `--clear-cache`
+* Logs
+
+---
+
+## 7. Think in “Flow”, Not Code
 
 Every request follows this flow:
+
+```
 Request arrives
 ↓
 Is method GET?
@@ -91,58 +232,80 @@ Is key in cache?
    ↓
    Yes → return cached response (X-Cache: HIT)
    No  → forward → cache → return (X-Cache: MISS)
+```
 
-6. Cache design (keep it simple)
-For version 1:
-Cache = in-memory map
-Key = full URL (/products?limit=10)
-Value =
-status code
-headers
-body
-timestamp
-TTL can be optional at first.
+---
 
-7. About --clear-cache
+## 8. Cache Design (Keep It Simple)
+
+### Version 1 design
+
+* Cache: in-memory dictionary
+* Key: full URL (`/products?limit=10`)
+* Value:
+
+  * status code
+  * headers
+  * body
+  * timestamp
+
+TTL can be added later.
+
+---
+
+## 9. About `--clear-cache`
+
 Simple interpretation:
-Cache is global
---clear-cache empties it
-Print:
+
+* Cache is global
+* `--clear-cache` empties it
+* Program prints:
+
+```
 Cache cleared
+```
 
-8. What to write before coding (do this!)
+---
 
-Create a small document or notes with:
+## 10. What to Write Before Coding (Do This!)
 
-1. CLI contract
+Before writing code, define:
+
+### 1. CLI Contract
+
+```
 caching-proxy --port <number> --origin <url>
 caching-proxy --clear-cache
+```
 
-2. Cache rules
-Cache GET only
-Key = path + query
-In-memory
+---
 
-3. Known limitations
-No HTTPS interception
-No cache headers
-No persistence
+### 2. Cache Rules
 
-9. If you feel stuck, ask yourself this question
-“What is the smallest thing I can build that moves me forward?”
+* Cache GET requests only
+* Key = path + query string
+* In-memory storage
+
+---
+
+### 3. Known Limitations
+
+* No HTTPS interception
+* No cache-control headers
+* No persistence across restarts
+
+---
+
+## 11. If You Feel Stuck, Ask This Question
+
+> “What is the smallest thing I can build that moves me forward?”
+
 Not:
-“How do I finish everything?”
+
+> “How do I finish everything?”
+
 But:
-“Can I forward one request?”
-That mindset changes everything.
 
-10. What I’d expect from you at the end
-If you showed me:
-Working proxy
-Clear README
-Simple cache
-Clean explanation
-I’d say:
-“This person understands systems basics.”
-Not:
-“This person knows a framework.”
+> “Can I forward **one** request?”
+
+That mindset changes everything
